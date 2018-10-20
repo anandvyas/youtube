@@ -1,13 +1,27 @@
 #!/bin/bash
 
-videoID=$1
-videoURL="https://www.youtube.com/watch/?v=$videoID"
-videoMinutes=$2
-loop=$3
 mozillaProfile="hhytcn5z"
 currentDir=$(pwd)
 
 while true; do
+
+    # Read all video from file and convert into array
+    videos=()
+    i=0
+    while read line; do   
+        videos[$i]=$line
+        let i+=1    
+    done < videos.txt
+
+    count=${#videos[@]}\
+    randNumber=$(((RANDOM%$count)))
+    randEntity=${videos[$randNumber]}
+    
+    entity=($randEntity)
+
+    # variables
+    videoId=${entity[0]}
+    videoMinutes=${entity[1]}
 
     #browser array
     #browser=('chromium-browser' 'firefox')
@@ -34,8 +48,6 @@ while true; do
     # Make proxy entry in profile
     filepath="$currentDir/temp/firefox/$mozillaProfile.default/prefs.js"
 
-    echo "Make entry in $filepath"
-
     echo "user_pref(\"network.proxy.ssl\", \"$randProxy\");" >> $filepath
     echo "user_pref(\"network.proxy.ssl_port\", 8118);" >> $filepath
     echo "user_pref(\"network.proxy.http\", \"$randProxy\");" >> $filepath
@@ -44,21 +56,18 @@ while true; do
     echo "user_pref(\"app.update.enabled\", false); " >> $filepath
 
     # video duration
-
-    totalDuration=$(( $videoMinutes * 60 ))
-    randDuration=$(((RANDOM%$totalDuration)))
-
     totalDuration=$(( $videoMinutes * 60 ))
     halfDuration=$(( $totalDuration / 2 ))
     randDuration=$(((RANDOM%$halfDuration)))
     finalDuration=$(( $halfDuration + $randDuration ))
 
-    echo "Playing video $videoURL on $randBrowser with proxy $randProxy and total duration: $finalDuration seconds"
-    #command="docker run --name=youtube-player --link=youtube-proxy -d -p 6901:6901 -e VNC_RESOLUTION=800x600 -e VNC_PW="1234"  consol/ubuntu-xfce-vnc $randBrowser --proxy-server=$randProxy  https://www.youtube.com/watch?v=$1"
-    command="docker run --name=youtube-player --link=youtube-proxy -d -p 6901:6901 -v $(pwd)/temp:/headless/.mozilla -e VNC_RESOLUTION=800x600 -e VNC_PW="1234"  consol/ubuntu-xfce-vnc firefox --profile=$mozillaProfile --setDefaultBrowser https://www.youtube.com/watch?v=$1 "
-    #command="docker run --name=youtube-player --link=youtube-proxy -d -p 6901:6901 -v $(pwd)/temp:/headless/.mozilla -e VNC_RESOLUTION=800x600 -e VNC_PW="1234"  consol/ubuntu-xfce-vnc "
-    #command="docker run --name=youtube-player --link=youtube-proxy -itd -p 6901:6901 -e VNC_RESOLUTION=800x600 -e VNC_PW="1234" -v $(pwd):/opt consol/ubuntu-xfce-vnc /bin/bash /opt/firefox.sh $videoURL $randProxy 8118 >> /opt/log.txt"
-    echo $command
+    echo "Video https://www.youtube.com/watch?v=$videoId" 
+    echo "Browser: $randBrowser"
+    echo "Proxy: $randProxy:8118"
+    echo "Duration: $totalDuration finalDuration: $finalDuration"
+    echo "Start time: $(date +%d/%m/%Y-%H:%M:%S)"
+    
+    command="docker run --name=youtube-player --link=youtube-proxy -d -p 6901:6901 -v $(pwd)/temp:/headless/.mozilla -e VNC_RESOLUTION=800x600 -e VNC_PW="1234"  consol/ubuntu-xfce-vnc firefox --profile=$mozillaProfile --setDefaultBrowser https://www.youtube.com/watch?v=$videoId "
     $command
 
     sleep $finalDuration
