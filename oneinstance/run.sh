@@ -95,8 +95,9 @@ while true; do
     echo "Start time: $(date -d @$stime) Extimate End time: $(date -d @$etime)"
     
     while true; do
-        sleep 5
+        sleep 10
         currentTime=$(date +%s)
+        echo -ne "$(date -d @$currentTime)\r"
         if [ $currentTime -gt $etime ]; then
             break
         fi
