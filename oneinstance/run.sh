@@ -1,6 +1,6 @@
 #!/bin/bash
 
-trap "trap_ctrlc" 2
+trap "trap_ctrlc" SIGTERM SIGINT
 echo "Welcome to Youtube terminal..."
 echo "wait we are executing your dream script..."
 
@@ -22,7 +22,7 @@ function trap_ctrlc () {
     command="docker rm $(docker ps -a --format '{{.Names}}' | grep -G "^youtube-$processId-*")"
     $command
 
-    exit 2
+    exit $1
 }
 
 while true; do
@@ -59,7 +59,7 @@ while true; do
     finalDuration=$(( $halfDuration + $randDuration ))
     
     # Implement TOR Proxy
-    command="docker run --name youtube-$processId-proxy  --restart=always -it -p 8118 -d dperson/torproxy"
+    command="docker run --name youtube-$processId-proxy  --restart=always -it -p 8118:8118 -d dperson/torproxy"
     $command
 
     # Get Proxy IP
@@ -94,7 +94,13 @@ while true; do
     etime=$(expr $stime + $finalDuration )
     echo "Start time: $(date -d @$stime) Extimate End time: $(date -d @$etime)"
     
-    sleep $finalDuration
+    while true; do
+        sleep 5
+        currentTime=$(date +%s)
+        if [ $currentTime -gt $etime ]; then
+            break
+        fi
+    done
 
     ## Remove docker running images and network
     command="docker kill $(docker ps -a --format '{{.Names}}' | grep -G "^youtube-$processId-*")"
