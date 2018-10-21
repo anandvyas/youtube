@@ -1,32 +1,55 @@
 #!/bin/bash
 
+trap "trap_ctrlc" 2
+echo "Welcome to Youtube terminal..."
+echo "wait we are executing your dream script..."
+
+# Global variables
 mozillaProfile="hhytcn5z"
 currentDir=$(pwd)
 processId="$(date +%s)"
+
+function trap_ctrlc () {
+    echo "Please wait we are cleaning instances"
+    
+    # Remove Directory
+    command="rm -rf $currentDir/$processId"
+    $command
+
+    ## Remove docker running images and network
+    command="docker kill $(docker ps -a --format '{{.Names}}' | grep -G "^youtube-$processId-*")"
+    $command
+    command="docker rm $(docker ps -a --format '{{.Names}}' | grep -G "^youtube-$processId-*")"
+    $command
+
+    exit 2
+}
 
 while true; do
 
     # Read all video from file and convert into array
     videos=()
     i=0
-    while read line; do   
-        videos[$i]=$line
-        let i+=1    
+    while read -r line ; do
+        if [ -n "$line" ]; then
+            videos[$i]=$line
+            let i+=1
+        fi
     done < videos.txt
-
-    count=${#videos[@]}\
+    
+    # Get random video
+    count=${#videos[@]}
     randNumber=$(((RANDOM%$count)))
     randEntity=${videos[$randNumber]}
     
-    entity=($randEntity)
-
-    # variables
+    entity=(${randEntity//:/ })
     videoId=${entity[0]}
     videoMinutes=${entity[1]}
 
-    if [ ! $videoMinutes -gt 0 ]; then
+    # check video condition
+    if [ $videoMinutes -lt 1 ]; then
         echo "Video minutes not readable"
-        $videoMinutes = 5
+        videoMinutes=5
     fi
 
      # video duration
@@ -35,15 +58,8 @@ while true; do
     randDuration=$(((RANDOM%$halfDuration)))
     finalDuration=$(( $halfDuration + $randDuration ))
     
-    #browser array
-    #browser=('chromium-browser' 'firefox')
-    browser=('chromium-browser')
-    browserCount=${#browser[@]}
-    browserRandNumber=$(((RANDOM%$browserCount)))
-    randBrowser=${browser[$browserRandNumber]}
-
     # Implement TOR Proxy
-    command="docker run --name youtube-$processId-proxy --restart=always -it -p 8118 -d dperson/torproxy"
+    command="docker run --name youtube-$processId-proxy  --restart=always -it -p 8118 -d dperson/torproxy"
     $command
 
     # Get Proxy IP
@@ -70,17 +86,21 @@ while true; do
     $command
 
     echo "Video https://www.youtube.com/watch?v=$videoId" 
-    echo "Browser: $randBrowser"
     echo "Proxy: $proxyIp:$proxyPort"
     echo "Browser port $(docker inspect --format='{{(index (index .NetworkSettings.Ports "6901/tcp") 0).HostPort}}' youtube-$processId-player)"
     echo "Duration: $totalDuration finalDuration: $finalDuration"
-    echo "Start time: $(date +%d/%m/%Y-%H:%M:%S)"
+    
+    stime=$(date +%s)
+    etime=$(expr $stime + $finalDuration )
+    echo "Start time: $(date -d @$stime) Extimate End time: $(date -d @$etime)"
     
     sleep $finalDuration
 
-    ## Remove docker running images
+    ## Remove docker running images and network
     command="docker kill $(docker ps -a --format '{{.Names}}' | grep -G "^youtube-$processId-*")"
     $command
     command="docker rm $(docker ps -a --format '{{.Names}}' | grep -G "^youtube-$processId-*")"
     $command
 done
+
+ 
